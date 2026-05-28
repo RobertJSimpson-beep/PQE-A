@@ -1,0 +1,67 @@
+let
+    Source = Excel.CurrentWorkbook(){[Name="Table1"]}[Content],
+
+    // Add index so we can group every 6 rows
+    AddIndex = Table.AddIndexColumn(Source, "Index", 1, 1),
+
+    // Create a RecordID for each 6-row block
+    AddRecordID = Table.AddColumn(AddIndex, "RecordID", each Number.RoundDown(([Index]-1)/6), Int64.Type),
+
+    // Group by RecordID
+    Grouped = Table.Group(AddRecordID, {"RecordID"}, {{"Data", each _, type table}}),
+
+    // Extract values from each grouped table
+    Extracted = Table.AddColumn(
+        Grouped,
+        "Extracted",
+        each [
+            JournalSourceName = List.First(List.RemoveNulls([Data][Journal Source Name])),
+            LedgerName = List.First(List.RemoveNulls([Data][Ledger Name])),
+            LedgerCurrency = List.First(List.RemoveNulls([Data][Ledger Currency])),
+            EnteredCurrency = List.First(List.RemoveNulls([Data][Entered Currency])),
+            AccountingPeriod = List.First(List.RemoveNulls([Data][Accounting Period])),
+            AccountingDate = List.First(List.RemoveNulls([Data][Accounting Date])),
+            EventType = List.First(List.RemoveNulls([Data][Event Type])),
+            TransactionNumber = List.First(List.RemoveNulls([Data][Transaction Number])),
+            AccountingStatusMeaning = List.First(List.RemoveNulls([Data][Accounting Status Meaning])),
+            JournalEntryDescription = List.First(List.RemoveNulls([Data][Journal Entry Description])),
+            JournalLineNumber = List.First(List.RemoveNulls([Data][Journal Line Number])),
+            Account = List.First(List.RemoveNulls([Data][Account])),
+            AccountDescription = List.First(List.RemoveNulls([Data][Account Description])),
+            CostCentre = List.First(List.RemoveNulls([Data][Cost Centre])),
+            GLString = List.First(List.RemoveNulls([Data][GL String])),
+            AccountingClass = List.First(List.RemoveNulls([Data][Accounting Class])),
+            LineDescription = List.First(List.RemoveNulls([Data][Line Description])),
+
+            // Bottom-row-only column → take LAST non-null
+            SupportingReference = List.Last(List.RemoveNulls([Data][Supporting Reference])),
+
+            JournalLineEnteredAmountDR = List.First(List.RemoveNulls([Data][Journal Line Entered Amount DR])),
+            JournalLineEnteredAmountCR = List.First(List.RemoveNulls([Data][Journal Line Entered Amount CR])),
+            NetEntered = List.First(List.RemoveNulls([Data][Net Entered])),
+            JournalLineAccountedAmountDR = List.First(List.RemoveNulls([Data][Journal Line Accounted Amount DR])),
+            JournalLineAccountedAmountCR = List.First(List.RemoveNulls([Data][Journal Line Accounted Amount CR])),
+            NetAccounted = List.First(List.RemoveNulls([Data][Net Accounted])),
+            JournalCreatedByUsername = List.First(List.RemoveNulls([Data][Journal Created by Username])),
+            JournalLastUpdatedByUsername = List.First(List.RemoveNulls([Data][Journal Last Updated by Username]))
+        ]
+    ),
+
+    // Expand the extracted record into columns
+    Expanded = Table.ExpandRecordColumn(
+        Extracted,
+        "Extracted",
+        {
+            "JournalSourceName","LedgerName","LedgerCurrency","EnteredCurrency","AccountingPeriod",
+            "AccountingDate","EventType","TransactionNumber","AccountingStatusMeaning","JournalEntryDescription",
+            "JournalLineNumber","Account","AccountDescription","CostCentre","GLString","AccountingClass",
+            "LineDescription","SupportingReference","JournalLineEnteredAmountDR","JournalLineEnteredAmountCR",
+            "NetEntered","JournalLineAccountedAmountDR","JournalLineAccountedAmountCR","NetAccounted",
+            "JournalCreatedByUsername","JournalLastUpdatedByUsername"
+        }
+    ),
+
+    // Remove helper columns
+    Cleanup = Table.RemoveColumns(Expanded, {"Data", "Index", "RecordID"})
+in
+    Cleanup

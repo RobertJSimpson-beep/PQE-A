@@ -1,0 +1,8 @@
+Sub RefreshAllPQ_Button()
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    ThisWorkbook.RefreshAll
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    MsgBox "All refreshes started (may run in background).", vbInformation
+End Sub

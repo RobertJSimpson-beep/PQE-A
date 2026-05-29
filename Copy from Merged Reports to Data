@@ -1,0 +1,88 @@
+Option Explicit
+
+Sub CopyMergedToData_PasteValues()
+    Dim wb As Workbook
+    Dim wsSrc As Worksheet
+    Dim wsDest As Worksheet
+    Dim destStart As Range
+    Dim destClearRange As Range
+    Dim srcRange As Range
+    Dim srcLastRow As Long
+    Dim srcRowCount As Long
+    Dim destCols As Long
+    Dim srcColsToCopy As Long
+    Dim lo As ListObject
+
+    On Error GoTo ErrHandler
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+
+    Set wb = ThisWorkbook
+
+    ' Source and destination sheets
+    If Not SheetExists("Merged Reports", wb) Then
+        MsgBox "Source sheet 'Merged Reports' not found. Operation cancelled.", vbExclamation
+        GoTo CleanExit
+    End If
+    If Not SheetExists("Data", wb) Then
+        MsgBox "Destination sheet 'Data' not found. Operation cancelled.", vbExclamation
+        GoTo CleanExit
+    End If
+
+    Set wsSrc = wb.Worksheets("Merged Reports")
+    Set wsDest = wb.Worksheets("Data")
+
+    ' Destination start cell and clear area (J:AI from row 5 downward)
+    Set destStart = wsDest.Range("J5")
+    Set destClearRange = wsDest.Range("J5:AI" & wsDest.Rows.Count)
+    destClearRange.ClearContents
+
+    ' Determine number of destination columns (J:AI)
+    destCols = wsDest.Range("J1:AI1").Columns.Count
+
+    ' Determine source range to copy (include headers)
+    ' If there's a table on the source sheet, use the first ListObject (includes header row)
+    If wsSrc.ListObjects.Count > 0 Then
+        Set lo = wsSrc.ListObjects(1)
+        srcRowCount = lo.Range.Rows.Count
+        srcColsToCopy = Application.Min(destCols, lo.Range.Columns.Count)
+        Set srcRange = lo.Range.Resize(srcRowCount, srcColsToCopy)
+    Else
+        ' No table: find last used row using column A as anchor
+        srcLastRow = wsSrc.Cells(wsSrc.Rows.Count, "A").End(xlUp).Row
+        If srcLastRow < 1 Then
+            MsgBox "No data found on 'Merged Reports'. Operation cancelled.", vbInformation
+            GoTo CleanExit
+        End If
+        srcRowCount = srcLastRow ' assumes headers start at row 1
+        srcColsToCopy = destCols ' copy only as many columns as destination can accept
+        Set srcRange = wsSrc.Range("A1").Resize(srcRowCount, srcColsToCopy)
+    End If
+
+    ' Copy and paste values into destination starting at J5
+    srcRange.Copy
+    destStart.PasteSpecial xlPasteValues
+    Application.CutCopyMode = False
+
+    MsgBox "Merged Reports copied to Data (values pasted).", vbInformation
+
+CleanExit:
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    Exit Sub
+
+ErrHandler:
+    MsgBox "An error occurred: " & Err.Number & " - " & Err.Description, vbCritical
+    On Error Resume Next
+    Application.CutCopyMode = False
+    Resume CleanExit
+End Sub
+
+' Helper to check sheet existence
+Private Function SheetExists(sName As String, wb As Workbook) As Boolean
+    Dim sh As Worksheet
+    On Error Resume Next
+    Set sh = wb.Worksheets(sName)
+    SheetExists = Not sh Is Nothing
+    On Error GoTo 0
+End Function

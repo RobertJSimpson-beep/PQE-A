@@ -1,0 +1,142 @@
+Sub ImportREP10andREP13()
+    Dim fd As FileDialog
+    Dim fPath As String
+    Dim wbSrc As Workbook
+    Dim wsSrc As Worksheet
+    Dim wsDest As Worksheet
+    Dim srcLastRow As Long
+    Dim destWB As Workbook
+    Dim resp As VbMsgBoxResult
+    
+    On Error GoTo ErrHandler
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    Set destWB = ThisWorkbook
+
+    ' ---------------------------
+    ' REP10
+    ' ---------------------------
+    ' Ensure destination sheet exists
+    If SheetExists("REP10", destWB) = False Then
+        resp = MsgBox("Destination sheet 'REP10' not found in this workbook. Create it now?", vbYesNo + vbExclamation, "Sheet Missing")
+        If resp = vbYes Then
+            destWB.Worksheets.Add(After:=destWB.Worksheets(destWB.Worksheets.Count)).Name = "REP10"
+        Else
+            GoTo CleanExit
+        End If
+    End If
+
+    Set wsDest = destWB.Worksheets("REP10")
+
+    ' Clear existing data in columns A:AP but keep header row 1
+    wsDest.Range("A2:AP" & wsDest.Rows.Count).ClearContents
+
+    ' Prompt user to pick the source workbook for REP10
+    Set fd = Application.FileDialog(msoFileDialogFilePicker)
+    With fd
+        .Title = "Select the workbook that contains the REP10 sheet"
+        .Filters.Clear
+        .Filters.Add "Excel Files", "*.xlsx; *.xlsm; *.xlsb; *.xls"
+        .AllowMultiSelect = False
+        If .Show <> -1 Then
+            MsgBox "No file selected for REP10. Operation cancelled.", vbInformation
+            GoTo CleanExit
+        End If
+        fPath = .SelectedItems(1)
+    End With
+
+    ' Open source workbook read-only
+    Set wbSrc = Workbooks.Open(Filename:=fPath, ReadOnly:=True)
+    If SheetExists("REP10", wbSrc) = False Then
+        MsgBox "Source workbook does not contain a sheet named 'REP10'. Closing source workbook.", vbExclamation
+        wbSrc.Close SaveChanges:=False
+        GoTo CleanExit
+    End If
+
+    Set wsSrc = wbSrc.Worksheets("REP10")
+
+    ' Determine last row in source (column A used as anchor)
+    srcLastRow = wsSrc.Cells(wsSrc.Rows.Count, "A").End(xlUp).Row
+    If srcLastRow < 2 Then
+        MsgBox "No data found in source REP10 (no rows below header).", vbInformation
+    Else
+        ' Copy A2:AP(last row) to destination A2
+        wsSrc.Range("A2:AP" & srcLastRow).Copy Destination:=wsDest.Range("A2")
+    End If
+
+    wbSrc.Close SaveChanges:=False
+
+    ' ---------------------------
+    ' REP13
+    ' ---------------------------
+    If SheetExists("REP13", destWB) = False Then
+        resp = MsgBox("Destination sheet 'REP13' not found in this workbook. Create it now?", vbYesNo + vbExclamation, "Sheet Missing")
+        If resp = vbYes Then
+            destWB.Worksheets.Add(After:=destWB.Worksheets(destWB.Worksheets.Count)).Name = "REP13"
+        Else
+            GoTo CleanExit
+        End If
+    End If
+
+    Set wsDest = destWB.Worksheets("REP13")
+
+    ' Clear existing data in columns A:Z but keep header row 1
+    wsDest.Range("A2:Z" & wsDest.Rows.Count).ClearContents
+
+    ' Prompt user to pick the source workbook for REP13
+    Set fd = Application.FileDialog(msoFileDialogFilePicker)
+    With fd
+        .Title = "Select the workbook that contains the REP13 sheet"
+        .Filters.Clear
+        .Filters.Add "Excel Files", "*.xlsx; *.xlsm; *.xlsb; *.xls"
+        .AllowMultiSelect = False
+        If .Show <> -1 Then
+            MsgBox "No file selected for REP13. Operation cancelled.", vbInformation
+            GoTo CleanExit
+        End If
+        fPath = .SelectedItems(1)
+    End With
+
+    ' Open source workbook read-only
+    Set wbSrc = Workbooks.Open(Filename:=fPath, ReadOnly:=True)
+    If SheetExists("REP13", wbSrc) = False Then
+        MsgBox "Source workbook does not contain a sheet named 'REP13'. Closing source workbook.", vbExclamation
+        wbSrc.Close SaveChanges:=False
+        GoTo CleanExit
+    End If
+
+    Set wsSrc = wbSrc.Worksheets("REP13")
+
+    ' Determine last row in source (column A used as anchor)
+    srcLastRow = wsSrc.Cells(wsSrc.Rows.Count, "A").End(xlUp).Row
+    If srcLastRow < 2 Then
+        MsgBox "No data found in source REP13 (no rows below header).", vbInformation
+    Else
+        ' Copy A2:Z(last row) to destination A2
+        wsSrc.Range("A2:Z" & srcLastRow).Copy Destination:=wsDest.Range("A2")
+    End If
+
+    wbSrc.Close SaveChanges:=False
+
+    MsgBox "Import complete for REP10 and REP13.", vbInformation
+
+CleanExit:
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    Exit Sub
+
+ErrHandler:
+    MsgBox "An error occurred: " & Err.Number & " - " & Err.Description, vbCritical
+    On Error Resume Next
+    If Not wbSrc Is Nothing Then wbSrc.Close SaveChanges:=False
+    Resume CleanExit
+End Sub
+
+' Helper function to check if a sheet exists in a workbook
+Private Function SheetExists(sName As String, wb As Workbook) As Boolean
+    Dim sh As Worksheet
+    On Error Resume Next
+    Set sh = wb.Worksheets(sName)
+    SheetExists = Not sh Is Nothing
+    On Error GoTo 0
+End Function

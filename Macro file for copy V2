@@ -1,0 +1,117 @@
+Option Explicit
+
+Sub ImportREP10andREP13_FromSheet1_NoCreate()
+    Dim fd As FileDialog
+    Dim fPath As String
+    Dim wbSrc As Workbook
+    Dim wsSrc As Worksheet
+    Dim wsDest As Worksheet
+    Dim srcLastRow As Long
+    Dim destWB As Workbook
+
+    On Error GoTo ErrHandler
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    Set destWB = ThisWorkbook
+
+    ' ---------------------------
+    ' REP10
+    ' ---------------------------
+    If Not SheetExists("REP10", destWB) Then
+        MsgBox "Destination sheet 'REP10' not found in this workbook. Import cancelled.", vbExclamation
+        GoTo CleanExit
+    End If
+
+    Set wsDest = destWB.Worksheets("REP10")
+    wsDest.Range("A2:AP" & wsDest.Rows.Count).ClearContents
+
+    ' Pick source file for REP10
+    Set fd = Application.FileDialog(msoFileDialogFilePicker)
+    With fd
+        .Title = "Select the workbook that contains the REP10 data (Sheet1)"
+        .Filters.Clear
+        .Filters.Add "Excel Files", "*.xlsx; *.xlsm; *.xlsb; *.xls"
+        .AllowMultiSelect = False
+        If .Show <> -1 Then
+            MsgBox "No file selected for REP10. Operation cancelled.", vbInformation
+            GoTo CleanExit
+        End If
+        fPath = .SelectedItems(1)
+    End With
+
+    Set wbSrc = Workbooks.Open(Filename:=fPath, ReadOnly:=True)
+
+    ' Prefer Sheet1; if missing use first sheet
+    On Error Resume Next
+    Set wsSrc = wbSrc.Worksheets("Sheet1")
+    On Error GoTo ErrHandler
+    If wsSrc Is Nothing Then Set wsSrc = wbSrc.Worksheets(1)
+
+    ' Copy A2:AP(last row) to destination A2
+    srcLastRow = wsSrc.Cells(wsSrc.Rows.Count, "A").End(xlUp).Row
+    If srcLastRow >= 2 Then
+        wsSrc.Range("A2:AP" & srcLastRow).Copy Destination:=wsDest.Range("A2")
+    Else
+        MsgBox "No data found in source Sheet1 for REP10.", vbInformation
+    End If
+
+    wbSrc.Close SaveChanges:=False
+
+    ' ---------------------------
+    ' REP13
+    ' ---------------------------
+    If Not SheetExists("REP13", destWB) Then
+        MsgBox "Destination sheet 'REP13' not found in this workbook. Import cancelled.", vbExclamation
+        GoTo CleanExit
+    End If
+
+    Set wsDest = destWB.Worksheets("REP13")
+    wsDest.Range("A2:Z" & wsDest.Rows.Count).ClearContents
+
+    ' Pick source file for REP13
+    Set fd = Application.FileDialog(msoFileDialogFilePicker)
+    With fd
+        .Title = "Select the workbook that contains the REP13 data (Sheet1)"
+        .Filters.Clear
+        .Filters.Add "Excel Files", "*.xlsx; *.xlsm; *.xlsb; *.xls"
+        .AllowMultiSelect = False
+        If .Show <> -1 Then
+            MsgBox "No file selected for REP13. Operation cancelled.", vbInformation
+            GoTo CleanExit
+        End If
+        fPath = .SelectedItems(1)
+    End With
+
+    Set wbSrc = Workbooks.Open(Filename:=fPath, ReadOnly:=True)
+
+    On Error Resume Next
+    Set wsSrc = wbSrc.Worksheets("Sheet1")
+    On Error GoTo ErrHandler
+    If wsSrc Is Nothing Then Set wsSrc = wbSrc.Worksheets(1)
+
+    srcLastRow = wsSrc.Cells(wsSrc.Rows.Count, "A").End(xlUp).Row
+    If srcLastRow >= 2 Then
+        wsSrc.Range("A2:Z" & srcLastRow).Copy Destination:=wsDest.Range("A2")
+    Else
+        MsgBox "No data found in source Sheet1 for REP13.", vbInformation
+    End If
+
+    wbSrc.Close SaveChanges:=False
+
+    MsgBox "Import complete for REP10 and REP13.", vbInformation
+
+CleanExit:
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    Exit Sub
+
+ErrHandler:
+    MsgBox "An error occurred: " & Err.Number & " - " & Err.Description, vbCritical
+    On Error Resume Next
+    If Not wbSrc Is Nothing Then wbSrc.Close SaveChanges:=False
+    Resume CleanExit
+End Sub
+
+' Helper function to check if a sheet exists in a workbook
+Private Function SheetExists(sName As String, wb As Workbook) As Boolean
+    Dim sh As Worksheet

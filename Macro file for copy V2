@@ -115,3 +115,8 @@ End Sub
 ' Helper function to check if a sheet exists in a workbook
 Private Function SheetExists(sName As String, wb As Workbook) As Boolean
     Dim sh As Worksheet
+    On Error Resume Next
+    Set sh = wb.Worksheets(sName)
+    SheetExists = Not sh Is Nothing
+    On Error GoTo 0
+End Function
